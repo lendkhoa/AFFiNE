@@ -651,11 +651,150 @@ export class TableCell extends SignalWatcher(
     if (e.key !== 'Escape') {
       if (e.key === 'Tab') {
         e.preventDefault();
+        e.stopPropagation();
+
+        // Navigate to next/previous cell
+        if (e.shiftKey) {
+          this.moveToPreviousCell();
+        } else {
+          this.moveToNextCell();
+        }
         return;
       }
+
+      // Handle Enter key navigation
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.shiftKey) {
+          this.moveToCellAbove();
+        } else {
+          this.moveToCellBelow();
+        }
+        return;
+      }
+
       e.stopPropagation();
     }
   };
+
+  /**
+   * Move focus to the next cell (right, or next row if at end)
+   */
+  private moveToNextCell() {
+    const rows = this.dataManager.uiRows$.value;
+    const columns = this.dataManager.uiColumns$.value;
+
+    let nextRowIndex = this.rowIndex;
+    let nextColumnIndex = this.columnIndex + 1;
+
+    // If at end of row, move to next row's first cell
+    if (nextColumnIndex >= columns.length) {
+      nextColumnIndex = 0;
+      nextRowIndex = this.rowIndex + 1;
+
+      // If at last row, create a new row
+      if (nextRowIndex >= rows.length) {
+        this.dataManager.addRow();
+        // Give it a moment to render the new row
+        requestAnimationFrame(() => {
+          this.focusCell(nextRowIndex, nextColumnIndex);
+        });
+        return;
+      }
+    }
+
+    // Focus the next cell
+    this.focusCell(nextRowIndex, nextColumnIndex);
+  }
+
+  /**
+   * Move focus to the previous cell (left, or previous row if at start)
+   */
+  private moveToPreviousCell() {
+    const columns = this.dataManager.uiColumns$.value;
+
+    let prevRowIndex = this.rowIndex;
+    let prevColumnIndex = this.columnIndex - 1;
+
+    // If at start of row, move to previous row's last cell
+    if (prevColumnIndex < 0) {
+      prevRowIndex = this.rowIndex - 1;
+
+      // Don't go before first row
+      if (prevRowIndex < 0) {
+        return;
+      }
+
+      prevColumnIndex = columns.length - 1;
+    }
+
+    // Focus the previous cell
+    this.focusCell(prevRowIndex, prevColumnIndex);
+  }
+
+  /**
+   * Focus a specific cell by row and column index
+   */
+  private focusCell(rowIndex: number, columnIndex: number) {
+    const tableBlock = this.closest<TableBlockComponent>('affine-table');
+    if (!tableBlock) return;
+
+    // Find all cells in the table
+    const rows = tableBlock.querySelectorAll('tr');
+    const targetRow = rows[rowIndex];
+
+    if (!targetRow) return;
+
+    // Find the target cell
+    const cells = targetRow.querySelectorAll('affine-table-cell');
+    const targetCell = cells[columnIndex] as TableCell;
+
+    if (!targetCell) return;
+
+    // Focus the rich text editor in the target cell
+    requestAnimationFrame(() => {
+      const inlineEditor = targetCell.inlineEditor;
+      if (inlineEditor) {
+        // Focus at the start of the cell
+        inlineEditor.focusStart();
+      }
+    });
+  }
+
+  /**
+   * Move focus to the cell below
+   */
+  private moveToCellBelow() {
+    const rows = this.dataManager.uiRows$.value;
+    const nextRowIndex = this.rowIndex + 1;
+
+    // If at last row, create a new row
+    if (nextRowIndex >= rows.length) {
+      this.dataManager.addRow();
+      requestAnimationFrame(() => {
+        this.focusCell(nextRowIndex, this.columnIndex);
+      });
+      return;
+    }
+
+    this.focusCell(nextRowIndex, this.columnIndex);
+  }
+
+  /**
+   * Move focus to the cell above
+   */
+  private moveToCellAbove() {
+    const prevRowIndex = this.rowIndex - 1;
+
+    // Don't go before first row
+    if (prevRowIndex < 0) {
+      return;
+    }
+
+    this.focusCell(prevRowIndex, this.columnIndex);
+  }
 
   override connectedCallback() {
     super.connectedCallback();
