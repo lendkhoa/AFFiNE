@@ -5,6 +5,7 @@ import {
   ExportIcon,
   ExportToHtmlIcon,
   ExportToMarkdownIcon,
+  ExportToPdfIcon,
   ExportToPngIcon,
   PageIcon,
   PrinterIcon,
@@ -82,13 +83,22 @@ export const ExportMenuItems = ({
         label={t['Export to HTML']()}
       />
       {pageMode !== 'edgeless' && (
-        <ExportMenuItem
-          onSelect={() => exportHandler('png')}
-          className={className}
-          type="png"
-          icon={<ExportToPngIcon />}
-          label={t['Export to PNG']()}
-        />
+        <>
+          <ExportMenuItem
+            onSelect={() => exportHandler('png')}
+            className={className}
+            type="png"
+            icon={<ExportToPngIcon />}
+            label={t['Export to PNG']()}
+          />
+          <ExportMenuItem
+            onSelect={() => exportHandler('pdf')}
+            className={className}
+            type="png"
+            icon={<ExportToPdfIcon />}
+            label={t['Export to PDF']()}
+          />
+        </>
       )}
       <ExportMenuItem
         onSelect={() => exportHandler('markdown')}
