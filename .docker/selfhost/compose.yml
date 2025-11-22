@@ -22,6 +22,8 @@ services:
       - REDIS_SERVER_HOST=redis
       - DATABASE_URL=postgresql://${DB_USERNAME}:${DB_PASSWORD}@postgres:5432/${DB_DATABASE:-affine}
       - AFFINE_INDEXER_ENABLED=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   affine_migration:
