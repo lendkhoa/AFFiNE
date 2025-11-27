@@ -153,10 +153,11 @@
     "react-email": "4.0.11",
     "sinon": "^21.0.0",
     "supertest": "^7.0.0",
+    "tsx": "^4.20.6",
     "why-is-node-running": "^3.2.2"
   },
   "nodemonConfig": {
-    "exec": "node",
+    "exec": "tsx",
     "ignore": [
       "**/__tests__/**",
       "**/dist/**",
