@@ -1,7 +1,8 @@
 name: affine
 services:
   affine:
-    image: ghcr.io/toeverything/affine:${AFFINE_REVISION:-stable}
+    # image: ghcr.io/toeverything/affine:${AFFINE_REVISION:-stable}
+    image: affine-custom:latest
     container_name: affine_server
     ports:
       - '${PORT:-3010}:3010'

@@ -1,0 +1,63 @@
+FROM node:20-bookworm-slim as builder
+
+# Install ALL build dependencies including Rust
+RUN apt-get update && \
+    apt-get install -y \
+      build-essential \
+      python3 \
+      curl \
+      git && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy everything
+COPY . .
+
+# Install dependencies
+RUN yarn install --immutable
+
+# Build native modules inside Docker
+RUN yarn affine @affine/native build
+RUN yarn affine @affine/server-native build
+
+# Build backend inside Docker
+RUN yarn affine @affine/server build
+
+# Production stage
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+# Copy built backend
+COPY --from=builder /app/packages/backend/server/dist ./packages/backend/server/dist
+COPY --from=builder /app/packages/backend/server/package.json ./packages/backend/server/package.json
+COPY --from=builder /app/packages/backend/native ./packages/backend/native
+
+# Copy the ENTIRE pre-built frontend directory
+COPY ./packages/frontend/apps/web/dist ./packages/backend/server/static
+
+# Fix the publicPath in assets-manifest.json
+RUN sed -i 's|"publicPath": "https://dev.affineassets.com/"|"publicPath": "/"|' \
+    ./packages/backend/server/static/assets-manifest.json
+
+# Create admin and mobile manifests with proper structure (not empty objects)
+RUN mkdir -p ./packages/backend/server/static/admin ./packages/backend/server/static/mobile && \
+    cat ./packages/backend/server/static/assets-manifest.json > ./packages/backend/server/static/admin/assets-manifest.json && \
+    cat ./packages/backend/server/static/assets-manifest.json > ./packages/backend/server/static/mobile/assets-manifest.json
+
+# Copy necessary node_modules
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl libjemalloc2 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LD_PRELOAD=libjemalloc.so.2
+EXPOSE 3010
+ENV NODE_ENV=production
+CMD ["node", "./packages/backend/server/dist/main.js"]
